@@ -1,44 +1,16 @@
-import * as THREE from 'three'
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
+import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { AudioLoader, AudioListener, Audio } from 'three';
 
-// Variables de control del juego
-let gameRunning = false;
-let animationId = null;
-let gamePaused = false;
-let gameStartTime = 0;
-
-// Escena, cámara y renderer
-const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 150, 260) //150 modifica la posición de la camara
+// =============================================
+// CONSTANTES Y CONFIGURACIÓN INICIAL
+// =============================================
 
 const modelPaths = {
   train: 'modeloTren/scene.gltf',
   barrier: 'modeloBarrera/scene.gltf'
 };
-
-const trackCount = 3;
-const trackWidth = 300;
-const trackSpacing = trackWidth / trackCount;
-
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
-renderer.shadowMap.enabled = true
-renderer.setPixelRatio(window.devicePixelRatio)
-renderer.setSize(window.innerWidth, window.innerHeight)
-document.body.appendChild(renderer.domElement)
-
-// Grupo para la pista
-const trackGroup = new THREE.Group();
-scene.add(trackGroup);
-
-// FbxLoader y animaciones
-const fbxLoader = new FBXLoader()
-const gltfLoader = new GLTFLoader();
-
-let mixer
-const animationsMap = {}
-let currentAction
 
 const animationFiles = {
   'Adelante': 'models/fbx/Adelante.fbx',
@@ -48,7 +20,84 @@ const animationFiles = {
   'Caer': 'models/fbx/Caer.fbx',
   'Alto': 'models/fbx/Alto.fbx',
   'Arrastre': 'models/fbx/Arrastre.fbx',
-}
+};
+
+const trackCount = 3;
+const trackWidth = 300;
+const trackSpacing = trackWidth / trackCount;
+
+// =============================================
+// VARIABLES DE ESTADO DEL JUEGO
+// =============================================
+
+let gameRunning = false;
+let gamePaused = false;
+let gameStartTime = 0;
+let animationId = null;
+let frames = 0;
+let spawnRate = 150;
+let trackSpeed = 10;
+
+// =============================================
+// ELEMENTOS PRINCIPALES DE THREE.JS
+// =============================================
+
+// Escena
+const scene = new THREE.Scene();
+
+// Cámara
+const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 150, 260);
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// =============================================
+// SISTEMA DE AUDIO
+// =============================================
+
+const listener = new AudioListener();
+camera.add(listener);
+const audioLoader = new AudioLoader();
+const backgroundMusic = new Audio(listener);
+
+// Cargar música de fondo
+audioLoader.load('js/musica.mp3', (buffer) => {
+  backgroundMusic.setBuffer(buffer);
+  backgroundMusic.setLoop(true);
+  backgroundMusic.setVolume(0.5);
+});
+
+// =============================================
+// ILUMINACIÓN
+// =============================================
+
+const light = new THREE.DirectionalLight(0xffffff, 0.5);
+light.position.set(0, 3, 1);
+light.castShadow = true;
+scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+const backLight = new THREE.DirectionalLight(0xffffff, 1);
+backLight.position.set(0, 50, -100);
+backLight.castShadow = true;
+scene.add(backLight);
+
+// =============================================
+// SISTEMA DE ANIMACIONES
+// =============================================
+
+const fbxLoader = new FBXLoader();
+const gltfLoader = new GLTFLoader();
+
+let mixer;
+const animationsMap = {};
+let currentAction;
+let playerModel;
 
 function loadAnimation(name, path) {
   fbxLoader.load(path, (anim) => {
@@ -62,7 +111,26 @@ function loadAnimation(name, path) {
   });
 }
 
-// Clase Box (colisionador)
+function playAnimation(name) {
+  if (currentAction === animationsMap[name]) return;
+
+  if (!cube.canJump) {
+    if (cube.velocity.y > 0 && name !== 'Saltar') return;
+    if (cube.velocity.y < 0 && name !== 'Caer') return;
+  }
+
+  if (animationsMap[name]) {
+    const toPlay = animationsMap[name];
+    if (currentAction) { currentAction.fadeOut(0.1); }
+    toPlay.reset().fadeIn(0.1).play();
+    currentAction = toPlay;
+  }
+}
+
+// =============================================
+// CLASES Y FUNCIONES DE FÍSICAS
+// =============================================
+
 class Box extends THREE.Mesh {
   constructor({ width, height, depth, color = '#00ff00',
     velocity = { x: 0, y: 0, z: 0 },
@@ -71,84 +139,98 @@ class Box extends THREE.Mesh {
     super(
       new THREE.BoxGeometry(width, height, depth),
       new THREE.MeshStandardMaterial({ color })
-    )
+    );
 
-    this.canJump = false
-    this.width = width
-    this.height = height
-    this.depth = depth
-    this.position.set(position.x, position.y, position.z)
+    this.canJump = false;
+    this.width = width;
+    this.height = height;
+    this.depth = depth;
+    this.position.set(position.x, position.y, position.z);
 
-    this.velocity = velocity
-    this.gravity = -0.25
-    this.zAcceleration = zAcceleration
+    this.velocity = velocity;
+    this.gravity = -0.25;
+    this.zAcceleration = zAcceleration;
 
-    this.updateSides()
+    this.updateSides();
   }
 
   updateSides() {
-    this.right = this.position.x + this.width / 2
-    this.left = this.position.x - this.width / 2
-    this.bottom = this.position.y - this.height / 2
-    this.top = this.position.y + this.height / 2
-    this.front = this.position.z + this.depth / 2
-    this.back = this.position.z - this.depth / 2
+    this.right = this.position.x + this.width / 2;
+    this.left = this.position.x - this.width / 2;
+    this.bottom = this.position.y - this.height / 2;
+    this.top = this.position.y + this.height / 2;
+    this.front = this.position.z + this.depth / 2;
+    this.back = this.position.z - this.depth / 2;
   }
 
   update(ground) {
-    this.updateSides()
-    if (this.zAcceleration) this.velocity.z += 0.0003
-    this.position.x += this.velocity.x
-    this.position.z += this.velocity.z
-    this.applyGravity(ground)
+    this.updateSides();
+    if (this.zAcceleration) this.velocity.z += 0.0003;
+    this.position.x += this.velocity.x;
+    this.position.z += this.velocity.z;
+    this.applyGravity(ground);
   }
 
   applyGravity(ground) {
-    this.velocity.y += this.gravity
+    this.velocity.y += this.gravity;
     if (boxCollision({ box1: this, box2: ground })) {
-      this.velocity.y = 0
-      this.canJump = true
-      this.position.y = ground.top + this.height / 2
+      this.velocity.y = 0;
+      this.canJump = true;
+      this.position.y = ground.top + this.height / 2;
     } else {
-      this.canJump = false
-      this.position.y += this.velocity.y
+      this.canJump = false;
+      this.position.y += this.velocity.y;
     }
   }
 }
 
-function boxCollision({ box1, box2 }) { // Colisión
-  const xCollision = box1.right >= box2.left && box1.left <= box2.right
-  const yCollision = box1.bottom + box1.velocity.y <= box2.top && box1.top >= box2.bottom
-  const zCollision = box1.front >= box2.back && box1.back <= box2.front
+function boxCollision({ box1, box2 }) {
+  const xCollision = box1.right >= box2.left && box1.left <= box2.right;
+  const yCollision = box1.bottom + box1.velocity.y <= box2.top && box1.top >= box2.bottom;
+  const zCollision = box1.front >= box2.back && box1.back <= box2.front;
 
-  return xCollision && yCollision && zCollision
+  return xCollision && yCollision && zCollision;
 }
 
-const cube = new Box({ // Cubo invisible
+// =============================================
+// OBJETOS DEL JUEGO
+// =============================================
+
+// Cubo del jugador (colisionador)
+const cube = new Box({
   width: 20,
   height: 25,
   depth: 10,
   velocity: { x: 0, y: -0.01, z: 0 },
   position: { x: 0, y: 12.5, z: 100 }
-})
-cube.visible = false
-cube.castShadow = true
-scene.add(cube)
+});
+cube.visible = false;
+cube.castShadow = true;
+scene.add(cube);
 
+// Suelo
 const ground = new Box({
   width: trackWidth,
   height: 5,
   depth: 3000,
   color: '#2D1B0E',
   position: { x: 0, y: -5, z: 0 }
-})
+});
+ground.receiveShadow = true;
+scene.add(ground);
 
-ground.receiveShadow = true
-scene.add(ground)
+// Grupo para la pista
+const trackGroup = new THREE.Group();
+scene.add(trackGroup);
 
-// Modifica la función createTracks() para agregar el movimiento de las texturas
+// Enemigos
+const enemies = [];
+
+// =============================================
+// CONFIGURACIÓN DE LA PISTA
+// =============================================
+
 function createTracks() {
-  // Primero cargamos el modelo GLTF original como lo tenías
   const gltfLoader = new GLTFLoader();
   gltfLoader.load('escenario/scene.gltf', (gltf) => {
     const sceneModel = gltf.scene;
@@ -165,7 +247,6 @@ function createTracks() {
 
     trackGroup.add(sceneModel);
 
-    // Ahora agregamos las vías del tren con tablas de madera
     const railMaterial = new THREE.MeshStandardMaterial({
       color: 0x333333,
       roughness: 0.7,
@@ -178,14 +259,11 @@ function createTracks() {
       metalness: 0.1
     });
 
-    // Crear un array para almacenar las tablas de madera
     const woodPlanks = [];
 
-    // Crear las vías (rieles) para cada una de las 3 pistas
     for (let i = 0; i < trackCount; i++) {
       const trackX = -trackWidth / 2 + trackSpacing / 2 + i * trackSpacing;
 
-      // Riél izquierdo
       const leftRail = new THREE.Mesh(
         new THREE.BoxGeometry(5, 2, 3000),
         railMaterial
@@ -195,7 +273,6 @@ function createTracks() {
       leftRail.castShadow = true;
       trackGroup.add(leftRail);
 
-      // Riél derecho
       const rightRail = new THREE.Mesh(
         new THREE.BoxGeometry(5, 2, 3000),
         railMaterial
@@ -205,7 +282,6 @@ function createTracks() {
       rightRail.castShadow = true;
       trackGroup.add(rightRail);
 
-      // Tablas de madera entre los rieles (cada 1.5 unidades en Z)
       for (let z = -1500; z < 1500; z += 10) {
         const woodPlank = new THREE.Mesh(
           new THREE.BoxGeometry(25, 1, 2),
@@ -219,40 +295,24 @@ function createTracks() {
       }
     }
 
-    // Agregar la lógica de movimiento de las tablas en el animate()
     function movePlanks(speed) {
       woodPlanks.forEach(plank => {
         plank.position.z += speed;
-
-        // Si la tabla sale del área visible, la reposicionamos al inicio
         if (plank.position.z > 1500) {
           plank.position.z = -1500;
         }
       });
     }
 
-    // Guardamos la función en el trackGroup para poder acceder a ella
     trackGroup.userData.movePlanks = movePlanks;
   });
 }
 
 createTracks();
 
-// Luces
-const light = new THREE.DirectionalLight(0xffffff, 0.5)
-light.position.set(0, 3, 1)
-light.castShadow = true
-scene.add(light)
-scene.add(new THREE.AmbientLight(0xffffff, 0.5))
-
-const backLight = new THREE.DirectionalLight(0xffffff, 1);
-backLight.position.set(0, 50, -100); // Posición inicial detrás del personaje
-backLight.castShadow = true;
-scene.add(backLight);
-
-backLight.position.set(cube.position.x, 50, cube.position.z - 100);
-
-let playerModel // Modelo y animaciones
+// =============================================
+// MODELO DEL JUGADOR
+// =============================================
 
 fbxLoader.load(animationFiles['Alto'], (fbx) => {
   playerModel = fbx;
@@ -290,18 +350,22 @@ fbxLoader.load(animationFiles['Alto'], (fbx) => {
   });
 
   Object.values(animationsMap).forEach(action => {
-    action.clampWhenFinished = true
-    action.setLoop(THREE.LoopRepeat, Infinity)
-  })
+    action.clampWhenFinished = true;
+    action.setLoop(THREE.LoopRepeat, Infinity);
+  });
 
   mixer.update(0);
 });
 
+// =============================================
+// CONTROLES
+// =============================================
+
 const keys = {
-  a: { pressed: false }, // Teclado
+  a: { pressed: false },
   d: { pressed: false },
   w: { pressed: false }
-}
+};
 
 window.addEventListener('keydown', (event) => {
   if (!gameRunning || gamePaused) return;
@@ -328,49 +392,34 @@ window.addEventListener('keyup', (event) => {
   }
 });
 
-function playAnimation(name) {
-  if (currentAction === animationsMap[name]) return
-
-  if (!cube.canJump) {
-    if (cube.velocity.y > 0 && name !== 'Saltar') return
-    if (cube.velocity.y < 0 && name !== 'Caer') return
-  }
-
-  if (animationsMap[name]) {
-    const toPlay = animationsMap[name]
-    if (currentAction) { currentAction.fadeOut(0.1) }
-    toPlay.reset().fadeIn(0.1).play()
-    currentAction = toPlay
-  }
-}
-
-const enemies = [] // Enemigos
-let frames = 0
-let spawnRate = 150   //////// 200
-let trackSpeed = 10; //////// 5
+// =============================================
+// GESTIÓN DEL JUEGO
+// =============================================
 
 function startGame() {
   if (!gameRunning) {
     gameRunning = true;
     gamePaused = false;
-    gameStartTime = performance.now(); // Registrar el tiempo de inicio
+    gameStartTime = performance.now();
     document.getElementById('startBtn').disabled = true;
     document.getElementById('pauseBtn').disabled = false;
-
-    playAnimation('Alto'); // Forzar animación "Alto" al inicio
+    backgroundMusic.play();
+    playAnimation('Alto');
     animate();
   }
 }
 
-function togglePause() { // Función para pausar/reanudar el juego
+function togglePause() {
   if (gameRunning) {
     if (gamePaused) {
       gamePaused = false;
       document.getElementById('pauseBtn').textContent = 'Pausar';
+      backgroundMusic.play();
       animate();
     } else {
       gamePaused = true;
       document.getElementById('pauseBtn').textContent = 'Reanudar';
+      backgroundMusic.pause();
       if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
@@ -388,7 +437,7 @@ function restartGame() {
   cube.position.set(0, 12.5, 50);
   cube.velocity = { x: 0, y: -0.01, z: 0 };
 
-  enemies.forEach(enemy => { // Eliminar tanto los colliders como sus modelos asociados
+  enemies.forEach(enemy => {
     if (enemy.userData.model) {
       scene.remove(enemy.userData.model);
     }
@@ -416,10 +465,14 @@ function restartGame() {
   gameRunning = false;
   gamePaused = false;
 
+  backgroundMusic.stop();
   startGame();
 }
 
-// Event listeners para los botones
+// =============================================
+// EVENT LISTENERS
+// =============================================
+
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('pauseBtn').addEventListener('click', togglePause);
 document.getElementById('restartBtn').addEventListener('click', restartGame);
@@ -433,7 +486,17 @@ document.querySelectorAll('#startBtn, #pauseBtn, #restartBtn, #retryButton').for
   });
 });
 
-const clock = new THREE.Clock()
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// =============================================
+// BUCLE PRINCIPAL
+// =============================================
+
+const clock = new THREE.Clock();
 
 function animate() {
   animationId = requestAnimationFrame(animate);
@@ -445,25 +508,21 @@ function animate() {
 
   if (cube) {
     backLight.position.set(
-      cube.position.x,           // Seguir en X (izquierda/derecha)
-      cube.position.y + 50,      // Mantener altura relativa al personaje (Y)
-      cube.position.z - 100      // Posición detrás del personaje (Z)
+      cube.position.x,
+      cube.position.y + 50,
+      cube.position.z - 100
     );
-
-    // Opcional: Hacer que la luz mire hacia el personaje
     backLight.target.position.copy(cube.position);
     backLight.target.updateMatrixWorld();
   }
 
   if (mixer) mixer.update(delta);
-  if (elapsedTime >= 1) {
-    if (trackGroup.userData.movePlanks) {
-      trackGroup.userData.movePlanks(trackSpeed * delta * 10);
-    }
+  if (elapsedTime >= 1 && trackGroup.userData.movePlanks) {
+    trackGroup.userData.movePlanks(trackSpeed * delta * 10);
   }
 
   if (elapsedTime >= 1 && frames % 1000 === 0) {
-    trackSpeed += 0.3;  /////// 0.2
+    trackSpeed += 0.3;
   }
 
   cube.velocity.x = 0;
@@ -492,13 +551,13 @@ function animate() {
       }
     } else {
       if (cube.velocity.y > 0) {
-        playAnimation('Saltar')
+        playAnimation('Saltar');
       } else {
-        playAnimation('Caer')
+        playAnimation('Caer');
       }
 
-      if (keys.a.pressed) cube.velocity.x = -2
-      else if (keys.d.pressed) cube.velocity.x = 2
+      if (keys.a.pressed) cube.velocity.x = -2;
+      else if (keys.d.pressed) cube.velocity.x = 2;
     }
   } else {
     playAnimation('Alto');
@@ -507,22 +566,17 @@ function animate() {
   }
 
   const limitX = (ground.width / 2) - (cube.width / 2) - 15;
-  cube.position.x = Math.max(-limitX, Math.min(limitX, cube.position.x))
-  cube.update(ground)
+  cube.position.x = Math.max(-limitX, Math.min(limitX, cube.position.x));
+  cube.update(ground);
 
   if (playerModel) {
-    playerModel.position.lerp(cube.position, 0.3)
+    playerModel.position.lerp(cube.position, 0.3);
   }
 
-  // Actualizar posición de la cámara (seguir al personaje)
   camera.position.x = cube.position.x;
-  camera.position.z = cube.position.z + 200; // Mantener el offset en Z
-  camera.lookAt(cube.position.x, cube.position.y + 100, cube.position.z); // Mirar hacia el personaje
+  camera.position.z = cube.position.z + 200;
+  camera.lookAt(cube.position.x, cube.position.y + 100, cube.position.z);
 
-  // Actualizar posición de la luz trasera (seguir al personaje)
-  backLight.position.set(cube.position.x, 50, cube.position.z - 100);
-
-  // Resto del código de animate() permanece igual...
   if (elapsedTime >= 1) {
     enemies.forEach((collider, index) => {
       collider.update(ground);
@@ -538,10 +592,9 @@ function animate() {
         document.getElementById("scoreDisplay").textContent = frames;
         cancelAnimationFrame(animationId);
         gameRunning = false;
+        backgroundMusic.stop();
       }
     });
-
-    const gltfLoader = new GLTFLoader();
 
     if (frames % spawnRate === 0 && gameRunning && !gamePaused) {
       if (spawnRate > 50) spawnRate -= 2;

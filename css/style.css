@@ -1,4 +1,3 @@
-/* RESET Y ESTILOS BASE */
 body, html {
   overflow: hidden;
   margin: 0;
@@ -24,11 +23,14 @@ body, html {
   justify-content: center;
   align-items: center;
   z-index: 2000;
-  color: white;
+  color: rgb(255, 255, 255);
   text-align: center;
-  background-size: cover; /* Cubre todo el espacio */
-  background-position: center; /* Centra la imagen */
-  background-repeat: no-repeat; /* Evite repetición */
+  background-size: cover;
+  /* Cubre todo el espacio */
+  background-position: center;
+  /* Centra la imagen */
+  background-repeat: no-repeat;
+  /* Evite repetición */
 }
 
 /* HEADER */
@@ -37,16 +39,12 @@ body, html {
   top: 0;
   width: 100%;
   padding: 20px 0;
-  background: linear-gradient(90deg, #ff00008c, #ffbf0090, #ff000092);
-  color: rgb(0, 0, 0);
+  background: linear-gradient(90deg, #0000006d);
+  color: rgb(255, 255, 255);
   text-align: center;
   font-size: 1.8rem;
   font-weight: bold;
-  letter-spacing: 2px;
-  text-transform: uppercase;
   z-index: 2001;
-  box-shadow: 0 5px 25px rgba(206, 123, 14, 0.642);
-  border-bottom: 2px solid #ffffff;
 }
 
 /* CONTENIDO CENTRAL (ajustado para no solapar header/footer) */
@@ -59,7 +57,7 @@ body, html {
 #cover h1 {
   font-size: 3.5rem;
   margin-bottom: 20px;
-  text-shadow: 0 0 10px rgb(255, 77, 0);
+  text-shadow: 0 0 10px rgb(0, 0, 0);
 }
 
 #cover p {
@@ -71,13 +69,13 @@ body, html {
 #coverBtn {
   padding: 15px 50px;
   font-size: 1.2rem;
-  background: linear-gradient(145deg, #ff0000, #ff7700);
+  background: linear-gradient(145deg, #4c4c4cb8, #000000);
   border: none;
   border-radius: 40px;
-  color: white;
+  color: rgb(255, 255, 255);
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 0, 0, 0.701);
+  box-shadow: 0 4px 15px rgb(75, 75, 75);
 }
 
 #coverBtn:hover {
@@ -91,13 +89,10 @@ body, html {
   bottom: 0;
   width: 100%;
   padding: 15px 0;
-  background: linear-gradient(90deg, #ff000099, #ff990079);
-  color: #000000;
+  background: linear-gradient(90deg, #000000c7);
+  color: #ffffff;
   text-align: center;
   font-size: 1rem;
-  z-index: 2001;
-  border-top: 1px solid #ff6363;
-  box-shadow: 0 -5px 20px rgba(255, 255, 255, 0.205);
 }
 
 .cover-footer::before {
@@ -107,42 +102,35 @@ body, html {
   left: 0;
   width: 100%;
   height: 1px;
-  background: #ffffff;
-  box-shadow: 0 0 10px #ff0707;
 }
 
 /* ---------------------------- */
 /* INSTRUCCIONES */
 /* ---------------------------- */
-
 #instructions {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(145deg, rgba(255, 60, 60, 0.593) 0%, rgba(255, 85, 0, 0.637) 100%);
+  background: linear-gradient(145deg, rgba(94, 94, 94, 0.67) 0%, rgba(43, 43, 43, 0.308) 100%);
   border-radius: 16px;
   padding: 25px;
   width: 85%;
   max-width: 450px;
   color: #ffffff;
   font-family: 'Rajdhani', 'Arial', sans-serif;
-  box-shadow: 0 10px 25px rgb(255, 0, 0),
-              0 0 0 2px rgb(0, 255, 8),
-              0 0 30px rgb(255, 0, 0);
   z-index: 1000;
-  border: 1px solid rgb(255, 255, 255);
   backdrop-filter: blur(8px);
   animation: pulse-glow 6s infinite alternate;
 }
 
 #instructions h2 {
   margin-top: 0;
-  color: rgb(255, 85, 0);
+  color: rgb(255, 255, 255);
   text-align: center;
   font-size: clamp(1.4em, 5vw, 1.8em);
-  margin-bottom: 20px;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.351);
+  margin-bottom: 50px;
+  text-shadow: 0 0 10px rgb(0, 0, 0);
   letter-spacing: 1px;
   font-weight: 700;
 }
@@ -173,43 +161,43 @@ body, html {
 
 .key {
   display: inline-block;
-  background: linear-gradient(to bottom, #2a2a4a 0%, #1a1a3a 100%);
-  color: rgb(0, 0, 0);
+  background: linear-gradient(to bottom, #000000 0%, rgb(20, 20, 20) 100%);
+  color: rgb(255, 255, 255);
   padding: 3px 10px;
   margin: 0 4px;
   border-radius: 5px;
   font-family: 'Courier New', monospace;
   font-weight: bold;
-  box-shadow: 0 3px 0 #ffffff, 
-              inset 0 0 5px rgb(255, 255, 255);
-  border: 1px solid rgb(255, 51, 0);
-  text-shadow: 0 0 5px rgb(255, 255, 255);
+  box-shadow: 0 3px 0 #000000,
+    inset 0 0 5px rgb(253, 253, 253);
+  border: 1px solid rgb(59, 46, 42);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.747);
   transform: translateY(-1px);
 }
 
 #instructions strong {
-  color: rgb(89, 255, 0);
+  color: rgb(0, 254, 21);
   font-weight: bold;
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.479);
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.414);
 }
 
 /* Efecto de tecla ESPACIO especial */
 .key[style*="ESPACIO"] {
   padding: 3px 15px;
-  background: linear-gradient(to bottom, #ffffff 0%, #ff0000 100%);
 }
 
 /* Animación de pulso */
 @keyframes pulse-glow {
   0% {
-    box-shadow: 0 10px 25px rgb(255, 110, 110),
-                0 0 0 2px rgb(255, 51, 0),
-                0 0 30px rgb(255, 102, 0);
+    box-shadow: 0 0px 25px rgba(108, 108, 108, 0.537),
+      0 0 0 2px rgba(82, 82, 82, 0.492),
+      0 0 30px rgba(123, 123, 123, 0.611);
   }
+
   100% {
-    box-shadow: 0 10px 35px rgba(255, 128, 128, 0.7),
-                0 0 0 3px rgba(0, 0, 0, 0.4),
-                0 0 40px rgb(255, 123, 0);
+    box-shadow: 0 10px 35px rgba(105, 105, 105, 0.7),
+      0 0 0 3px rgba(0, 0, 0, 0.4),
+      0 0 40px rgba(118, 118, 118, 0.422);
   }
 }
 
@@ -221,39 +209,19 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: 
+  background:
     radial-gradient(circle at 20% 30%, rgba(100, 100, 255, 0.1) 0%, transparent 30%),
     radial-gradient(circle at 80% 70%, rgba(255, 100, 255, 0.1) 0%, transparent 30%),
     linear-gradient(135deg, #0a0a20 0%, #1a1a30 100%);
   z-index: -1;
 }
 
-/* Para la fuente Rajdhani (añadir en el head del HTML) */
-/* <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet"> */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ---------------------------- */
 /* CONTROLES (SOLO VISIBLES EN INSTRUCCIONES/JUEGO) */
 /* ---------------------------- */
-#cover + .controls {
-  display: none; /* Oculta en portada */
+#cover+.controls {
+  display: none;
+  /* Oculta en portada */
 }
 
 .controls {
@@ -292,9 +260,18 @@ body::before {
   box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
 }
 
-.start { background: linear-gradient(145deg, #00c853, #009624); }
-.pause { background: linear-gradient(145deg, #ffeb3b, #fbc02d); color: #333; }
-.restart { background: linear-gradient(145deg, #f44336, #c62828); }
+.start {
+  background: linear-gradient(145deg, #00c853, #009624);
+}
+
+.pause {
+  background: linear-gradient(145deg, #ffeb3b, #fbc02d);
+  color: #333;
+}
+
+.restart {
+  background: linear-gradient(145deg, #f44336, #c62828);
+}
 
 /* Estilo cuando el botón está DESACTIVADO (gris) */
 .game-btn:disabled {
@@ -306,7 +283,7 @@ body::before {
 .game-btn:hover {
   transform: translateY(-4px) scale(1.05);
   box-shadow:
-    0 12px 20px rgba(0, 0, 0, 0.4),
+    0 12px 20px rgba(0, 0, 0, 0.923),
     inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
@@ -325,21 +302,20 @@ body::before {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: rgba(26, 26, 46, 0.95);
-  color: white;
+  background-color: rgba(0, 0, 0, 0.758);
+  color: rgb(255, 255, 255);
   padding: 30px;
   border-radius: 10px;
   text-align: center;
   display: none;
   z-index: 1000;
-  border: 1px solid #f44336;
-  box-shadow: 0 0 25px rgba(244, 67, 54, 0.5);
+  box-shadow: 0 0 50px rgb(0, 0, 0);
 }
 
 #retryButton {
-  background: linear-gradient(145deg, #f44336, #c62828);
+  background: linear-gradient(145deg, #76000059, #6a0000);
   border: none;
-  color: white;
+  color: rgb(255, 255, 255);
   padding: 12px 25px;
   margin-top: 20px;
   border-radius: 40px;
@@ -351,6 +327,13 @@ body::before {
 /* ANIMACIONES */
 /* ---------------------------- */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
