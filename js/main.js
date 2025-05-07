@@ -3,63 +3,33 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AudioLoader, AudioListener, Audio } from 'three';
 
-// =============================================
-// CONSTANTES Y CONFIGURACIÓN INICIAL
-// =============================================
+// Variables de control del juego
+let gameRunning = false;
+let animationId = null;
+let gamePaused = false;
+let gameStartTime = 0;
+
+// Escena, cámara y renderer
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 150, 260);
 
 const modelPaths = {
   train: 'modeloTren/scene.gltf',
   barrier: 'modeloBarrera/scene.gltf'
 };
 
-const animationFiles = {
-  'Adelante': 'models/fbx/Adelante.fbx',
-  'Izquierdo': 'models/fbx/Izquierdo.fbx',
-  'Derecho': 'models/fbx/Derecho.fbx',
-  'Saltar': 'models/fbx/Saltar.fbx',
-  'Caer': 'models/fbx/Caer.fbx',
-  'Alto': 'models/fbx/Alto.fbx',
-  'Arrastre': 'models/fbx/Arrastre.fbx',
-};
-
 const trackCount = 3;
 const trackWidth = 300;
 const trackSpacing = trackWidth / trackCount;
 
-// =============================================
-// VARIABLES DE ESTADO DEL JUEGO
-// =============================================
-
-let gameRunning = false;
-let gamePaused = false;
-let gameStartTime = 0;
-let animationId = null;
-let frames = 0;
-let spawnRate = 150;
-let trackSpeed = 10;
-
-// =============================================
-// ELEMENTOS PRINCIPALES DE THREE.JS
-// =============================================
-
-// Escena
-const scene = new THREE.Scene();
-
-// Cámara
-const camera = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 150, 260);
-
-// Renderer
 const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 renderer.shadowMap.enabled = true;
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// =============================================
-// SISTEMA DE AUDIO
-// =============================================
-
+// Sistema de audio
 const listener = new AudioListener();
 camera.add(listener);
 const audioLoader = new AudioLoader();
@@ -72,32 +42,27 @@ audioLoader.load('js/musica.mp3', (buffer) => {
   backgroundMusic.setVolume(0.5);
 });
 
-// =============================================
-// ILUMINACIÓN
-// =============================================
+// Grupo para la pista
+const trackGroup = new THREE.Group();
+scene.add(trackGroup);
 
-const light = new THREE.DirectionalLight(0xffffff, 0.5);
-light.position.set(0, 3, 1);
-light.castShadow = true;
-scene.add(light);
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-const backLight = new THREE.DirectionalLight(0xffffff, 1);
-backLight.position.set(0, 50, -100);
-backLight.castShadow = true;
-scene.add(backLight);
-
-// =============================================
-// SISTEMA DE ANIMACIONES
-// =============================================
-
+// Loaders y animaciones
 const fbxLoader = new FBXLoader();
 const gltfLoader = new GLTFLoader();
 
 let mixer;
 const animationsMap = {};
 let currentAction;
-let playerModel;
+
+const animationFiles = {
+  'Adelante': 'models/fbx/Adelante.fbx',
+  'Izquierdo': 'models/fbx/Izquierdo.fbx',
+  'Derecho': 'models/fbx/Derecho.fbx',
+  'Saltar': 'models/fbx/Saltar.fbx',
+  'Caer': 'models/fbx/Caer.fbx',
+  'Alto': 'models/fbx/Alto.fbx',
+  'Arrastre': 'models/fbx/Arrastre.fbx',
+};
 
 function loadAnimation(name, path) {
   fbxLoader.load(path, (anim) => {
@@ -111,26 +76,7 @@ function loadAnimation(name, path) {
   });
 }
 
-function playAnimation(name) {
-  if (currentAction === animationsMap[name]) return;
-
-  if (!cube.canJump) {
-    if (cube.velocity.y > 0 && name !== 'Saltar') return;
-    if (cube.velocity.y < 0 && name !== 'Caer') return;
-  }
-
-  if (animationsMap[name]) {
-    const toPlay = animationsMap[name];
-    if (currentAction) { currentAction.fadeOut(0.1); }
-    toPlay.reset().fadeIn(0.1).play();
-    currentAction = toPlay;
-  }
-}
-
-// =============================================
-// CLASES Y FUNCIONES DE FÍSICAS
-// =============================================
-
+// Clase Box (colisionador)
 class Box extends THREE.Mesh {
   constructor({ width, height, depth, color = '#00ff00',
     velocity = { x: 0, y: 0, z: 0 },
@@ -192,11 +138,6 @@ function boxCollision({ box1, box2 }) {
   return xCollision && yCollision && zCollision;
 }
 
-// =============================================
-// OBJETOS DEL JUEGO
-// =============================================
-
-// Cubo del jugador (colisionador)
 const cube = new Box({
   width: 20,
   height: 25,
@@ -208,7 +149,6 @@ cube.visible = false;
 cube.castShadow = true;
 scene.add(cube);
 
-// Suelo
 const ground = new Box({
   width: trackWidth,
   height: 5,
@@ -218,17 +158,6 @@ const ground = new Box({
 });
 ground.receiveShadow = true;
 scene.add(ground);
-
-// Grupo para la pista
-const trackGroup = new THREE.Group();
-scene.add(trackGroup);
-
-// Enemigos
-const enemies = [];
-
-// =============================================
-// CONFIGURACIÓN DE LA PISTA
-// =============================================
 
 function createTracks() {
   const gltfLoader = new GLTFLoader();
@@ -310,9 +239,19 @@ function createTracks() {
 
 createTracks();
 
-// =============================================
-// MODELO DEL JUGADOR
-// =============================================
+// Luces
+const light = new THREE.DirectionalLight(0xffffff, 0.5);
+light.position.set(0, 3, 1);
+light.castShadow = true;
+scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+const backLight = new THREE.DirectionalLight(0xffffff, 1);
+backLight.position.set(0, 50, -100);
+backLight.castShadow = true;
+scene.add(backLight);
+
+let playerModel;
 
 fbxLoader.load(animationFiles['Alto'], (fbx) => {
   playerModel = fbx;
@@ -357,10 +296,6 @@ fbxLoader.load(animationFiles['Alto'], (fbx) => {
   mixer.update(0);
 });
 
-// =============================================
-// CONTROLES
-// =============================================
-
 const keys = {
   a: { pressed: false },
   d: { pressed: false },
@@ -373,7 +308,6 @@ window.addEventListener('keydown', (event) => {
   switch (event.code) {
     case 'KeyA': keys.a.pressed = true; break;
     case 'KeyD': keys.d.pressed = true; break;
-    case 'KeyW': keys.w.pressed = true; break;
     case 'Space':
       if (cube.canJump) {
         cube.velocity.y = 6;
@@ -388,13 +322,29 @@ window.addEventListener('keyup', (event) => {
   switch (event.code) {
     case 'KeyA': keys.a.pressed = false; break;
     case 'KeyD': keys.d.pressed = false; break;
-    case 'KeyW': keys.w.pressed = false; break;
   }
 });
 
-// =============================================
-// GESTIÓN DEL JUEGO
-// =============================================
+function playAnimation(name) {
+  if (currentAction === animationsMap[name]) return;
+
+  if (!cube.canJump) {
+    if (cube.velocity.y > 0 && name !== 'Saltar') return;
+    if (cube.velocity.y < 0 && name !== 'Caer') return;
+  }
+
+  if (animationsMap[name]) {
+    const toPlay = animationsMap[name];
+    if (currentAction) { currentAction.fadeOut(0.1); }
+    toPlay.reset().fadeIn(0.1).play();
+    currentAction = toPlay;
+  }
+}
+
+const enemies = [];
+let frames = 0;
+let spawnRate = 150;
+let trackSpeed = 10;
 
 function startGame() {
   if (!gameRunning) {
@@ -469,10 +419,7 @@ function restartGame() {
   startGame();
 }
 
-// =============================================
-// EVENT LISTENERS
-// =============================================
-
+// Event listeners
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('pauseBtn').addEventListener('click', togglePause);
 document.getElementById('restartBtn').addEventListener('click', restartGame);
@@ -485,16 +432,6 @@ document.querySelectorAll('#startBtn, #pauseBtn, #restartBtn, #retryButton').for
     }
   });
 });
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// =============================================
-// BUCLE PRINCIPAL
-// =============================================
 
 const clock = new THREE.Clock();
 
@@ -667,3 +604,10 @@ function animate() {
   }
   frames++;
 }
+
+// Manejo de redimensionamiento
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}); 
